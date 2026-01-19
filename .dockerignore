@@ -1,0 +1,48 @@
+# Dataset (too large for container)
+dataset/
+
+# Virtual environment
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter notebooks (not needed for inference)
+notebooks/
+.ipynb_checkpoints/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Speckit artifacts
+.specify/
+.claude/
+
+# Logs and temp
+*.log
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation source (README is copied separately)
+*.md
+!README.md
+
+# Screenshots (not needed for API)
+screenshots/
