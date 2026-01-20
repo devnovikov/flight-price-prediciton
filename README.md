@@ -356,7 +356,7 @@ gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/flight-price-api
 ```
 4. Deploy to Cloud Run
 ```bash
-gcloud run deploy traffic-sign-api \
+gcloud run deploy flight-price-api \
   --image gcr.io/YOUR_PROJECT_ID/flight-price-api \
   --platform managed \
   --region us-central1 \

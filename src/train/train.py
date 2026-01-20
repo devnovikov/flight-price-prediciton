@@ -123,36 +123,74 @@ def train_with_tuning(model, params, X_train, y_train, X_test, y_test, name: str
 
 
 def train_catboost_with_tuning(X_train, y_train, X_test, y_test) -> dict:
-    """Train CatBoost with manual hyperparameter search (sklearn compatibility issue workaround)."""
+    """Train CatBoost with manual hyperparameter search matching notebook's RandomizedSearchCV behavior.
+
+    Note: Due to CatBoost/sklearn compatibility issues with RandomizedSearchCV,
+    we use manual cross-validation with the same parameter space and number of
+    iterations as the notebook to ensure reproducible results.
+    """
+    from sklearn.model_selection import KFold
+    import itertools
+    import random
+
     print(f"\n  Tuning CatBoost...")
 
-    # Define parameter combinations to try
-    param_combinations = [
-        {'depth': 6, 'learning_rate': 0.1, 'iterations': 200},
-        {'depth': 8, 'learning_rate': 0.05, 'iterations': 300},
-        {'depth': 10, 'learning_rate': 0.03, 'iterations': 500},
-    ]
+    # Same parameter space as notebook and constants.py
+    param_space = {
+        'iterations': [100, 200, 300],
+        'depth': [4, 6, 8, 10],
+        'learning_rate': [0.01, 0.05, 0.1],
+        'l2_leaf_reg': [1, 3, 5, 7]
+    }
+
+    # Generate all combinations
+    keys = list(param_space.keys())
+    all_combinations = list(itertools.product(*[param_space[k] for k in keys]))
+    all_combinations = [dict(zip(keys, combo)) for combo in all_combinations]
+
+    # Sample N_ITER_SEARCH combinations with same random state as notebook
+    random.seed(RANDOM_STATE)
+    n_iter = min(N_ITER_SEARCH, len(all_combinations))
+    sampled_params = random.sample(all_combinations, n_iter)
+
+    # 5-fold cross-validation
+    kfold = KFold(n_splits=CV_FOLDS, shuffle=True, random_state=RANDOM_STATE)
 
     best_model = None
-    best_rmse = float('inf')
+    best_cv_rmse = float('inf')
     best_params = None
 
-    for params in param_combinations:
-        model = CatBoostRegressor(
-            random_state=RANDOM_STATE,
-            verbose=0,
-            **params
-        )
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
-        rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+    for i, params in enumerate(sampled_params):
+        cv_rmses = []
 
-        if rmse < best_rmse:
-            best_rmse = rmse
-            best_model = model
+        for train_idx, val_idx in kfold.split(X_train):
+            X_tr, X_val = X_train.iloc[train_idx], X_train.iloc[val_idx]
+            y_tr, y_val = y_train.iloc[train_idx], y_train.iloc[val_idx]
+
+            model = CatBoostRegressor(
+                random_state=RANDOM_STATE,
+                verbose=0,
+                **params
+            )
+            model.fit(X_tr, y_tr)
+            y_pred_val = model.predict(X_val)
+            cv_rmses.append(np.sqrt(mean_squared_error(y_val, y_pred_val)))
+
+        mean_cv_rmse = np.mean(cv_rmses)
+
+        if mean_cv_rmse < best_cv_rmse:
+            best_cv_rmse = mean_cv_rmse
             best_params = params
 
+    # Train final model on full training set with best params
+    best_model = CatBoostRegressor(
+        random_state=RANDOM_STATE,
+        verbose=0,
+        **best_params
+    )
+    best_model.fit(X_train, y_train)
     y_pred = best_model.predict(X_test)
+
     print(f"    Best params: {best_params}")
 
     return {

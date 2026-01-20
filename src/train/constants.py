@@ -56,8 +56,7 @@ XGB_PARAMS = {
     'max_depth': [3, 5, 7, 10],
     'learning_rate': [0.01, 0.05, 0.1, 0.2],
     'subsample': [0.6, 0.8, 1.0],
-    'colsample_bytree': [0.6, 0.8, 1.0],
-    'min_child_weight': [1, 3, 5]
+    'colsample_bytree': [0.6, 0.8, 1.0]
 }
 
 CAT_PARAMS = {
